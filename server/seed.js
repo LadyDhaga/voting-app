@@ -1,9 +1,14 @@
 require('dotenv').config();
 const mongoose = require('mongoose');
 
+// Use new URL parser and unified topology
 mongoose.set('debug', true);
+mongoose.set('useNewUrlParser', true);
+
 mongoose.Promise = global.Promise;
-mongoose.connect(process.env.DATABASE);
+mongoose.connect(process.env.DATABASE, {
+  useNewUrlParser: true,
+});
 
 const db = require('./models');
 
@@ -24,34 +29,36 @@ const polls = [
 
 const seed = async () => {
   try {
-    await db.User.remove();
-    console.log('DROP ALL USERS');
+    // Remove existing documents using deleteMany
+    await db.User.deleteMany({});
+    console.log('Dropped all users');
 
-    await db.Poll.remove();
-    console.log('DROP ALL POLLS');
+    await db.Poll.deleteMany({});
+    console.log('Dropped all polls');
 
-    await Promise.all(
-      users.map(async user => {
-        const data = await db.User.create(user);
-        await data.save();
-      }),
+    // Create new users
+    const createdUsers = await Promise.all(
+      users.map(user => db.User.create(user)),
     );
-    console.log('CREATED USERS', JSON.stringify(users));
+    console.log('Created users:', JSON.stringify(users));
 
+    // Create new polls
     await Promise.all(
       polls.map(async poll => {
         poll.options = poll.options.map(option => ({ option, votes: 0 }));
-        const data = await db.Poll.create(poll);
-        const user = await db.User.findOne({ username: 'username' });
-        data.user = user;
-        user.polls.push(data._id);
+        const createdPoll = await db.Poll.create(poll);
+        const user = createdUsers.find(u => u.username === 'username');
+        createdPoll.user = user._id;
+        user.polls.push(createdPoll._id);
         await user.save();
-        await data.save();
+        await createdPoll.save();
       }),
     );
-    console.log('CREATED POLLS', JSON.stringify(polls));
+    console.log('Created polls:', JSON.stringify(polls));
   } catch (err) {
-    console.error(err);
+    console.error('Error seeding database:', err);
+  } finally {
+    mongoose.connection.close(); // Close connection after seeding
   }
 };
 

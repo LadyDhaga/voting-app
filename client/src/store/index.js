@@ -1,8 +1,8 @@
 import { createStore, applyMiddleware, compose } from 'redux';
 import thunk from 'redux-thunk';
-
 import rootReducer from './reducers';
 
+// Initial state
 const DEFAULT_STATE = {
   auth: { isAuthenticated: false },
   error: { message: null },
@@ -14,12 +14,16 @@ const DEFAULT_STATE = {
   },
 };
 
+// Middleware setup
+const middleware = [thunk];
+
+// Redux DevTools setup
+const devTools =
+  window.__REDUX_DEVTOOLS_EXTENSION__ && window.__REDUX_DEVTOOLS_EXTENSION__();
+
+// Create store
 export const store = createStore(
   rootReducer,
   DEFAULT_STATE,
-  compose(
-    applyMiddleware(thunk),
-    window.__REDUX_DEVTOOLS_EXTENSION__ &&
-      window.__REDUX_DEVTOOLS_EXTENSION__(),
-  ),
+  compose(applyMiddleware(...middleware), devTools),
 );

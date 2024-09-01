@@ -2,37 +2,54 @@ const mongoose = require('mongoose');
 const User = require('./user');
 
 const optionSchema = new mongoose.Schema({
-  option: String,
+  option: {
+    type: String,
+    required: true,
+    minlength: 1,
+  },
   votes: {
     type: Number,
     default: 0,
   },
 });
 
-const pollSchema = new mongoose.Schema({
-  user: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
+const pollSchema = new mongoose.Schema(
+  {
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+    },
+    question: {
+      type: String,
+      required: true,
+      minlength: 1,
+    },
+    options: [optionSchema],
+    voted: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+      },
+    ],
   },
-  created: {
-    type: Date,
-    default: Date.now,
+  {
+    timestamps: true, // Automatically adds createdAt and updatedAt fields
   },
-  question: String,
-  options: [optionSchema],
-  voted: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
-});
+);
 
-pollSchema.pre('remove', async function(next) {
+pollSchema.pre('remove', async function (next) {
   try {
     const user = await User.findById(this.user);
-    user.polls = user.polls.filter(
-      poll => poll._id.toString() !== this._id.toString(),
-    );
-    await user.save();
-    return next();
+    if (user) {
+      user.polls = user.polls.filter(
+        poll => poll._id.toString() !== this._id.toString(),
+      );
+      await user.save();
+    }
+    next();
   } catch (err) {
-    return next(err);
+    next(err);
   }
 });
 
